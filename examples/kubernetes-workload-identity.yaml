@@ -1,0 +1,158 @@
+# Azure Workload Identity Setup for Grafana Backup Tool
+# This example shows how to configure Azure Workload Identity for secure authentication
+
+---
+# ServiceAccount with workload identity annotations
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana-backup-sa
+  namespace: default
+  annotations:
+    azure.workload.identity/client-id: "YOUR_MANAGED_IDENTITY_CLIENT_ID"
+    azure.workload.identity/tenant-id: "YOUR_AZURE_TENANT_ID"
+  labels:
+    azure.workload.identity/use: "true"
+
+---
+# ConfigMap for Grafana configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-backup-config
+  namespace: default
+data:
+  grafanaSettings.json: |
+    {
+      "grafana": {
+        "url": "https://your-grafana-instance.com",
+        "token": "your-grafana-api-token"
+      },
+      "general": {
+        "debug": false,
+        "backup_dir": "_OUTPUT_",
+        "verify_ssl": true
+      },
+      "azure": {
+        "container_name": "grafana-backups"
+      }
+    }
+
+---
+# CronJob for scheduled backups
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grafana-backup-cronjob
+  namespace: default
+  labels:
+    app: grafana-backup
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            azure.workload.identity/use: "true"
+            app: grafana-backup
+        spec:
+          serviceAccountName: grafana-backup-sa
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: grafana-backup
+            image: your-registry.azurecr.io/grafana-backup:latest
+            imagePullPolicy: Always
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              runAsNonRoot: true
+              runAsUser: 10001
+              runAsGroup: 10001
+              capabilities:
+                drop:
+                - ALL
+            env:
+            # Azure Workload Identity environment variables
+            - name: AZURE_CLIENT_ID
+              value: "YOUR_MANAGED_IDENTITY_CLIENT_ID"
+            - name: AZURE_TENANT_ID
+              value: "YOUR_AZURE_TENANT_ID"
+            - name: AZURE_FEDERATED_TOKEN_FILE
+              value: "/var/run/secrets/azure/tokens/azure-identity-token"
+            
+            # Azure Storage configuration
+            - name: AZURE_STORAGE_ACCOUNT_NAME
+              value: "yourstorageaccount"
+            - name: AZURE_STORAGE_CONTAINER_NAME
+              value: "grafana-backups"
+            
+            # Grafana configuration
+            - name: GRAFANA_URL
+              value: "https://your-grafana-instance.com"
+            - name: GRAFANA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-credentials
+                  key: api-token
+            
+            # Application settings
+            - name: DEBUG
+              value: "false"
+            - name: VERIFY_SSL
+              value: "true"
+            
+            volumeMounts:
+            - name: config-volume
+              mountPath: /opt/grafana-backup-tool/conf/grafanaSettings.json
+              subPath: grafanaSettings.json
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            - name: output
+              mountPath: /opt/grafana-backup-tool/_OUTPUT_
+            - name: azure-identity-token
+              mountPath: /var/run/secrets/azure/tokens
+              readOnly: true
+            
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+            
+          volumes:
+          - name: config-volume
+            configMap:
+              name: grafana-backup-config
+          - name: tmp
+            emptyDir: {}
+          - name: output
+            emptyDir: {}
+          - name: azure-identity-token
+            projected:
+              sources:
+              - serviceAccountToken:
+                  path: azure-identity-token
+                  audience: api://AzureADTokenExchange
+                  expirationSeconds: 3600
+
+---
+# Secret for Grafana API credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-credentials
+  namespace: default
+type: Opaque
+stringData:
+  api-token: "YOUR_GRAFANA_API_TOKEN"

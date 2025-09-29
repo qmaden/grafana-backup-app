@@ -1,0 +1,46 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: grafana-backup-tool
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-backup-tool
+  namespace: grafana-backup-tool
+data:
+  GRAFANA_URL: "http://grafana.grafana.svc.cluster.local:80"
+  GRAFANA_TOKEN: "{YOUR_GRAFANA_TOKEN}"
+  GRAFANA_ADMIN_ACCOUNT: "backup"
+  GRAFANA_ADMIN_PASSWORD: "{YOUR_GRAFANA_ADMIN_PASSWORD}"
+  AZURE_STORAGE_ACCOUNT_NAME: "yourstorageaccount"
+  AZURE_STORAGE_CONTAINER_NAME: "grafana-backups"
+  AZURE_MANAGED_IDENTITY_CLIENT_ID: "YOUR_MANAGED_IDENTITY_CLIENT_ID"
+---
+# Run grafana-backup-tool daily and store backups in an S3
+# compatible object storage such as minio
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grafana-backup-tool
+  namespace: grafana-backup-tool
+  labels:
+    app: grafana-backup-tool
+spec:
+  schedule: "0 4 * * *"
+  jobTemplate:
+    metadata:
+      labels:
+        app: grafana-backup-tool
+    spec:
+      template:
+        spec:
+          restartPolicy: "Never"
+          containers:
+            - name: grafana-backup-tool
+              image: "ysde/docker-grafana-backup-tool:1.2.4"
+              imagePullPolicy: Always
+              envFrom:
+                - configMapRef:
+                    name: grafana-backup-tool

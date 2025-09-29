@@ -1,0 +1,31 @@
+{
+  "grafana": {
+    "url": "https://your-grafana-instance.com",
+    "token": "",
+    "search_api_limit": 5000,
+    "default_user_password": "changeme123!",
+    "version": null,
+    "admin_account": "",
+    "admin_password": ""
+  },
+  "general": {
+    "debug": false,
+    "api_health_check": true,
+    "api_auth_check": true,
+    "verify_ssl": true,
+    "client_cert": null,
+    "backup_dir": "_OUTPUT_",
+    "backup_file_format": "%Y%m%d%H%M",
+    "uid_dashboard_slug_suffix": false,
+    "pretty_print": false
+  },
+  "azure": {
+    "_comment": "Azure Workload Identity Configuration (Recommended)",
+    "storage_account_name": "yourstorageaccount",
+    "container_name": "grafana-backups",
+    "managed_identity_client_id": "YOUR_MANAGED_IDENTITY_CLIENT_ID",
+    
+    "_comment_legacy": "Legacy connection string authentication (Deprecated)",
+    "connection_string": ""
+  }
+}
