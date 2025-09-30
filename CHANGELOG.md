@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.5.0] - Python 3.13 Upgrade
+
+### Updated
+- **Python version requirement**: Updated from Python 2.7/3.x to Python 3.11+ (recommended: Python 3.13)
+- **Docker base image**: Upgraded to Alpine Linux 3.22.1 with Python 3.13 support
+- **Dependencies**: Updated all dependencies to latest versions:
+  - `requests>=2.32.0`
+  - `azure-storage-blob>=12.26.0` (from 12.19.0)
+  - `azure-identity>=1.25.0` (from 1.15.0)
+  - `packaging>=24.0`
+  - `docopt>=0.6.2`
+- **GitHub Actions**: Updated CI/CD workflows to use latest actions and Python 3.13
+- **Build system**: Added modern pyproject.toml configuration alongside setup.py
+- **Code compatibility**: Fixed Python 3.13 compatibility issues (regex patterns)
+
+### Added
+- Modern Python packaging configuration with pyproject.toml
+- Requirements.txt file for dependency management
+- Enhanced type hints and Python 3.13 support
+- Updated classifiers for Python 3.11, 3.12, and 3.13
+
+### Fixed
+- Invalid escape sequence warnings in regex patterns
+- Python 3.13 compatibility issues
+
 # [2.0.0] - Azure-Only Version
 
 ### Added

@@ -1,10 +1,10 @@
 # Multi-stage Dockerfile for optimized production image
 # Stage 1: Build stage with all build dependencies
-FROM alpine:3.22 AS builder
+FROM alpine:3.22.1 AS builder
 
 # Build dependencies
 RUN apk add --no-cache \
-    python3>=3.11 \
+    python3>=3.13 \
     py3-pip \
     py3-cryptography \
     py3-cffi \
@@ -34,7 +34,7 @@ COPY README.md CHANGELOG.md LICENSE ./
 RUN uv pip install --system --break-system-packages --no-cache .
 
 # Stage 2: Runtime stage - minimal production image
-FROM alpine:3.22 AS runtime
+FROM alpine:3.22.1 AS runtime
 
 LABEL version="1.5.0" \
       description="Azure-only Grafana Backup Tool with Workload Identity support (Multi-stage optimized)"
@@ -52,7 +52,7 @@ ENV RESTORE="false" \
 
 # Install only runtime dependencies (no build tools)
 RUN apk add --no-cache \
-    python3>=3.11 \
+    python3>=3.13 \
     py3-cryptography \
     py3-cffi \
     py3-packaging \
@@ -65,7 +65,7 @@ RUN addgroup -g ${GID} -S ${USERNAME} && \
     adduser -u ${UID} -S ${USERNAME} -G ${USERNAME} -h /home/${USERNAME} -s /bin/bash
 
 # Copy Python packages from builder stage
-COPY --from=builder /usr/lib/python3.12/site-packages/ /usr/lib/python3.12/site-packages/
+COPY --from=builder /usr/lib/python3.13/site-packages/ /usr/lib/python3.13/site-packages/
 COPY --from=builder /usr/bin/grafana-backup /usr/bin/grafana-backup
 
 # Create application directory
